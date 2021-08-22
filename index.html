@@ -15,7 +15,6 @@
         <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Ubuntu:regular,bold&subset=Latin">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script type="module">
-            // import { Octokit } from "https://cdn.skypack.dev/@octokit/core";
         </script>
         <script src="js/script.js"></script>
     </head>
@@ -52,8 +51,8 @@
                         <div id="return_btn" class="innerbtn">Return</div>
                     </div>
                     <div class="btnspacing"></div>
-                    <div class="invisible forumbtn largebtn bluebtn gdisabled">
-                        <div id="generic_btn" class="innerbtn">Generic button</div>
+                    <div class="forumbtn largebtn bluebtn gdisabled">
+                        <div id="generic_btn" class="innerbtn"></div>
                     </div>
                     <div id="first_btn" class="gdisabled forumbtn smallbtn whitebtn"><div class="innerbtn">&#60;&#60;</div></div>
                     <div id="prev_btn" class="gdisabled forumbtn smallbtn whitebtn"><div class="innerbtn">&#60;</div></div>
@@ -64,24 +63,161 @@
             </div>
         </div>
 
+        <script type="module">
+            import { Octokit } from 'https://cdn.skypack.dev/@octokit/core';
+            let octokit;
+            let user;
+            let fork;
 
+            function setConnectionPage() {
+                setHeading('Extension pull-request',
+                    'Submit a self-made extension to extension store');
+                setBadge('https://raw.githubusercontent.com/sirjonasxx/G-Earth/master/G-Earth/src/main/resources/gearth/G-EarthLogoSmaller.png');
 
-
-
-        <script>
-            setHeading('https://raw.githubusercontent.com/sirjonasxx/G-ExtensionStore/repo/1.5/assets/icons/moderation1.png',
-                        'Extension pull-request',
-                        'Submit a self-made extension to extension store');
-
-            fetch('https://raw.githubusercontent.com/sirjonasxx/G-ExtensionStore/repo/1.5/store/config.json')
-                .then(response => response.json())
-                .then(data => {
-                    setQuickLinks('Supported extension API\'s:', data.frameworks)
+                $.getJSON('https://raw.githubusercontent.com/sirjonasxx/G-ExtensionStore/repo/1.5/store/config.json', data => {
+                    setQuickLinks('Supported extension API\'s:', data.frameworks);
                 });
 
-            setContentTitle('Connect to github');
+                setContentTitle('Connect to GitHub');
+                setContentBody('pages/githubconnect.html');
+                setButton('Connect', () => connectToGithub($('#githubToken').val(), false));
+                setButtonDisabled(false);
 
-            setContentBody('pages/githubconnect.html');
+                if(getCookie('token')) {
+                    connectToGithub(getCookie('token'), true)
+                }
+            }
+
+            async function setOverviewPage() {
+                clearBody();
+                setContentTitle('Your extensions');
+                setButton('Push changes', () => {});
+                setButtonDisabled(true)
+
+                // Use the folders of fork instead of extensions.json of main repo in case previous edits haven't been pr'ed yet
+                let extensions = await getAllExtensions();
+
+                addExtensionsToBody(extensions);
+                setButtonDisabled(false);
+                setButton('Create PR', createPullRequest);
+            }
+
+            function setExtensionPage(ext) {
+                clearBody();
+                // TODO
+                let rawUrl = ext.html_url.replace('github.com', 'raw.githubusercontent.com').replace('/tree', '');
+
+                const tags = [{
+                    tag: '{name}',
+                    value: extension.title
+                }, {
+                    tag: '{createdby}',
+                    value: `By ${data.authors[0].name}`
+                }, {
+                    tag: '{version}',
+                        value: `${data.version}`
+                }];
+
+                appendToBody(`pages/extensionform.html`, {
+                    tag: '{name'
+                })
+
+                appendToBody(`pages/extensionitem.html`, );
+            }
+
+            async function connectToGithub(token, auto) {
+                octokit = new Octokit({auth: token});
+                try {
+                    user = (await octokit.request('/user')).data;
+                    console.log(user);
+                    setBadge(user.avatar_url);
+                    document.cookie = `token=${token}`;
+
+                    let forks = await listForks();
+
+                    fork = forks.find(f => f.owner.id === user.id);
+
+                    if(!fork) {
+                        fork = await createNewFork();
+                    }
+
+                    await setOverviewPage();
+                } catch (e) {
+                    console.error(e);
+                    $('#tokenError').html(auto ? 'Github token expired' : 'Enter a valid access token!');
+                    document.cookie = '';
+                }
+            }
+
+            async function listForks() {
+                return (await octokit.request('GET /repos/{owner}/{repo}/forks', {
+                    owner: 'sirjonasxx',
+                    repo: 'G-ExtensionStore'
+                })).data;
+            }
+
+            async function createNewFork() {
+                return (await octokit.request('POST /repos/{owner}/{repo}/forks', {
+                    owner: 'sirjonasxx',
+                    repo: 'G-ExtensionStore'
+                })).data;
+            }
+
+            async function getAllExtensions() {
+                return (await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+                    owner: fork.owner.login,
+                    repo: fork.name,
+                    path: 'store/extensions'
+                })).data;
+            }
+
+            function addExtensionsToBody(extensions) {
+                for(let ext of extensions) {
+                    let rawUrl = ext.html_url.replace('github.com', 'raw.githubusercontent.com').replace('/tree', '');
+                    $.getJSON(`${rawUrl}/extension.json`, async data => {
+                        if (data.authors.filter(a => a.name.toLowerCase() === user.login.toLowerCase()).length > 0) {
+                            (await appendToBody(`pages/extensionitem.html`, {
+                                tag: '{name}',
+                                value: data.title
+                            }, {
+                                tag: '{createdby}',
+                                value: `By ${data.authors[0].name}`
+                            }, {
+                                tag: '{version}',
+                                value: `${data.version}`
+                            }, {
+                                tag: `{iconSrc}`,
+                                value: `${rawUrl}/icon.png`
+                            })).addEventListener('click', () => setExtensionPage(ext));
+                        }
+                    });
+                }
+            }
+
+            function createFile(extensionName, fileName, contentBase64) {
+                octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+                    owner: fork.owner.login,
+                    repo: fork.name,
+                    path: `store/extensions/${encodeURIComponent(extensionName)}/${fileName}`,
+                    content: contentBase64
+                });
+            }
+
+            function updateFile(extensionName, fileName, contentBase64, sha) {
+                octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+                    owner: fork.owner.login,
+                    repo: fork.name,
+                    path: `store/extensions/${encodeURIComponent(extensionName)}/${fileName}`,
+                    content: contentBase64,
+                    sha: sha
+                });
+            }
+
+            function createPullRequest() {
+
+            }
+
+            setConnectionPage();
         </script>
     </body>
 </html>

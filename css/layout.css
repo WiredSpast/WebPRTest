@@ -105,8 +105,7 @@
     box-shadow: 0 -1px 0 #218ac2 inset;
 
 
-    color: #218ac2
-;
+    color: #218ac2;
 }
 
 
@@ -156,4 +155,9 @@
     margin: 13px 2px 13px 5px;
 
     display: flex;
+}
+
+.error {
+    margin: 0;
+    color: red;
 }

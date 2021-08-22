@@ -25,6 +25,14 @@
     border-color: #bab8b4;
 }
 
+.content_item:nth-child(odd) {
+    background-color: #effeff;
+}
+
+.content_item:nth-child(even) {
+    background-color: #b5e6f9;
+}
+
 .item_lightblue {
     background-color: #effeff;
 }

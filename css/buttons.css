@@ -98,9 +98,9 @@
 }
 
 .greybtn.gdisabled > .innerbtn {
-    /*color: #;*/
-    /*background-color: #;*/
-    /*border-color: #;*/
+    color: #555555;
+    background-color: #aaaaaa;
+    border-color: #999999;
 }
 
 .greybtn.gdisabled {
