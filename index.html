@@ -89,9 +89,9 @@
             }
 
             async function setOverviewPage() {
+                setButton('Create PR', () => {});
                 clearBody();
                 setContentTitle('Your extensions');
-                setButton('Push changes', () => {});
                 setButtonDisabled(true)
 
                 // Use the folders of fork instead of extensions.json of main repo in case previous edits haven't been pr'ed yet
@@ -99,7 +99,7 @@
 
                 addExtensionsToBody(extensions);
                 setButtonDisabled(false);
-                setButton('Create PR', createPullRequest);
+                // setButton('Create PR', createPullRequest);
             }
 
             function setExtensionPage(ext) {
@@ -134,6 +134,7 @@
                     document.cookie = `token=${token}`;
 
                     let forks = await listForks();
+                    console.log(forks);
 
                     fork = forks.find(f => f.owner.id === user.id);
 
@@ -199,6 +200,7 @@
                     owner: fork.owner.login,
                     repo: fork.name,
                     path: `store/extensions/${encodeURIComponent(extensionName)}/${fileName}`,
+                    message: `Added ${fileName}`,
                     content: contentBase64
                 });
             }
@@ -208,13 +210,38 @@
                     owner: fork.owner.login,
                     repo: fork.name,
                     path: `store/extensions/${encodeURIComponent(extensionName)}/${fileName}`,
+                    message: `Updated ${fileName}`,
                     content: contentBase64,
                     sha: sha
                 });
             }
 
-            function createPullRequest() {
+            function deleteFile(extensionName, fileName, sha) {
+                octokit.request('DELETE /repos/{owner}/{repo}/contents/{path}', {
+                    owner: fork.owner.login,
+                    repo: fork.name,
+                    path: `store/extensions/${encodeURIComponent(extensionName)}/${fileName}`,
+                    message: `Removed ${fileName}`,
+                    sha: sha
+                });
+            }
 
+            async function getOpenPullRequests() {
+                return (await octokit.request('DELETE /repos/{owner}/{repo}/pulls', {
+                    owner: 'sirjonasxx',
+                    repo: 'G-ExtensionStore',
+                    state: 'open'
+                })).data;
+            }
+
+            function createPullRequest() {
+                octokit.request('POST /repos/{owner}/{repo}/pulls'), {
+                    owner: 'sirjonasxx',
+                    repo: 'G-ExtensionStore',
+                    title: 'Submitted or updated extension(s) through interface',
+                    head: `${fork.owner.login}:${fork.default_branch}`,
+                    base: fork.default_branch
+                }
             }
 
             setConnectionPage();
