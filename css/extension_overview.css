@@ -43,11 +43,8 @@
 }
 
 .oii_name {
-
     font-size: 13px;
     width: 100%;
-
-    overflow: hidden;
     max-height: 14px;
     min-height: 14px;
     padding-top: 4px;

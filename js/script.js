@@ -20,15 +20,16 @@ function clearBody() {
     $('#content_items_container').empty();
 }
 
-async function appendToBody(src, ...params) {
+async function appendToBody(src, params) {
     let data = await $.get(src);
     for (let param of params) {
         data = data.replaceAll(param.tag, param.value);
     }
-    data = data.replaceAll('\{(.*?)\}', '');
+    data = data.replaceAll(RegExp('\{[a-zA-Z]+\}', 'g'), '');
 
     $('#content_items_container').append(data);
-    return $('#content_items_container')[0].lastChild;
+    let itemContainer = $('#content_items_container')[0];
+    return itemContainer.lastChild.previousSibling;
 }
 
 function setQuickLinks(name, links) {

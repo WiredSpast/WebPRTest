@@ -12,8 +12,6 @@
         <link rel="stylesheet" href="css/extension_overview.css">
         <link rel="stylesheet" href="css/comments_overview.css">
 
-        <!--<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Ubuntu:regular,bold&subset=Latin">-->
-
         <link rel="shortcut icon" type="image/png" href="favicon.ico">
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -92,6 +90,9 @@
             }
 
             async function setOverviewPage() {
+                setReturn('Return', () => {});
+                setReturnVisible(false);
+
                 setButton('Create PR', () => {});
                 clearBody();
                 setContentTitle('Your extensions');
@@ -105,39 +106,34 @@
                 // setButton('Create PR', createPullRequest);
             }
 
-            function setExtensionPage(ext) {
+            async function setExtensionPage(ext) {
                 clearBody();
                 // TODO
                 let rawUrl = ext.html_url.replace('github.com', 'raw.githubusercontent.com').replace('/tree', '');
+                let extJson = await $.getJSON(`${rawUrl}/extension.json`);
 
-                const tags = [{
-                    tag: '{name}',
-                    value: extension.title
-                }, {
-                    tag: '{createdby}',
-                    value: `By ${data.authors[0].name}`
-                }, {
-                    tag: '{version}',
-                        value: `${data.version}`
-                }];
+                const tags = getTagsFromExtension(rawUrl, extJson);
 
-                appendToBody(`pages/extensionform.html`, {
-                    tag: '{name'
-                })
+                // TODO extensiondetails.html & extensionform.html
 
-                appendToBody(`pages/extensionitem.html`, );
+                appendToBody(`pages/extensionform.html`, tags)
+                appendToBody(`pages/extensionitem.html`, tags);
+                appendToBody(`pages/extensiondetails.html`, tags)
+
+                setReturn('Return', setOverviewPage);
+                setReturnVisible(true);
+                setReturnDisabled(false);
             }
 
             async function connectToGithub(token, auto) {
                 octokit = new Octokit({auth: token});
                 try {
                     user = (await octokit.request('/user')).data;
-                    console.log(user);
+
                     setBadge(user.avatar_url);
                     document.cookie = `token=${token}`;
 
                     let forks = await listForks();
-                    console.log(forks);
 
                     fork = forks.find(f => f.owner.id === user.id);
 
@@ -180,22 +176,89 @@
                     let rawUrl = ext.html_url.replace('github.com', 'raw.githubusercontent.com').replace('/tree', '');
                     $.getJSON(`${rawUrl}/extension.json`, async data => {
                         if (data.authors.filter(a => a.name.toLowerCase() === user.login.toLowerCase()).length > 0) {
-                            (await appendToBody(`pages/extensionitem.html`, {
+                            let extensionItem  = await appendToBody(`pages/extensionitem.html`, [{
                                 tag: '{name}',
                                 value: data.title
                             }, {
-                                tag: '{createdby}',
-                                value: `By ${data.authors[0].name}`
+                                tag: '{authors}',
+                                value: data.authors.map(a => a.name).join(', ')
                             }, {
                                 tag: '{version}',
                                 value: `${data.version}`
                             }, {
                                 tag: `{iconSrc}`,
                                 value: `${rawUrl}/icon.png`
-                            })).addEventListener('click', () => setExtensionPage(ext));
+                            }]);
+
+                            extensionItem.addEventListener('click', () => setExtensionPage(ext));
                         }
                     });
                 }
+            }
+
+            function getTagsFromExtension(rawUrl, extJson) {
+                const tags = [{
+                    tag: '{name}',
+                    value: extJson.title
+                }, {
+                    tag: '{version}',
+                    value: extJson.version
+                }, {
+                    tag: `{iconSrc}`,
+                    value: `${rawUrl}/icon.png`
+                }, {
+                    tag: '{screenshotSrc}',
+                    value: `${rawUrl}/screenshot.png`
+                }, {
+                    tag: '{description}',
+                    value: extJson.description.replaceAll('\r\n', '<br>').replaceAll('\r', '<br>').replaceAll('\n', '<br>')
+                }, {
+                    tag: '{username}',
+                    value: extJson.authors[0] ? (extJson.authors[0].username ? extJson.authors[0].username : extJson.authors[0].name) : ""
+                }, {
+                    tag: '{lookSrc}',
+                    value: `https://www.habbo${extJson.authors[0] ? extJson.authors[0].hotel: ''}/habbo-imaging/avatarimage?user=${extJson.authors[0] ? extJson.authors[0].username : ''}`
+                }, {
+                    tag: '{authors}',
+                    value: extJson.authors.map(a => a.name).join(', ')
+                }, {
+                    tag: '{categories}',
+                    value: extJson.categories.join(', ')
+                }, {
+                    tag: '{language}',
+                    value: extJson.language
+                }, {
+                    tag: '{framework}',
+                    value: `${extJson.framework.name} - v${extJson.framework.version}`
+                }, {
+                    tag: '{systems}',
+                    value: extJson.compatibility.systems.join(', ')
+                }, {
+                    tag: '{clients}',
+                    value: extJson.compatibility.clients.join(', ')
+                }];
+
+                if(extJson.readme) {
+                    tags.push({
+                        tag: '{readme}',
+                        value: 'README'
+                    }, {
+                        tag: '{readmeSrc}',
+                        value: extJson.readme
+                    });
+                }
+
+                if(extJson.source) {
+                    tags.push({
+                        tag: '{source}',
+                        value: 'Click Here'
+                    }, {
+                        tag: '{sourceUrl}',
+                        value: extJson.source
+                    });
+                }
+
+                return tags;
             }
 
             function createFile(extensionName, fileName, contentBase64) {

@@ -1,0 +1,33 @@
+<div class="comment_item content_item">
+  <div class="comment_header">
+    <div class="comment_item content_item">
+      <div class="comment_body comment_open">
+        <div class="cb_author">
+          <div id="habboName" class="cba_name">{username}</div>
+          <div class="cba_look">
+            <img id="habboLook" src="{lookSrc}" alt="User look" onerror="this.parentNode.remove()">
+          </div>
+        </div>
+        <div class="cb_content">
+          <b id="name">{name}</b> - v<label id="version">{version}</label><br>
+          <b>Description</b><br>
+          <div class="cbc_quote">
+            <label id="description">{description}</label><br><br>
+            <a id="readme" href="{readmeSrc}" target="_blank">{readme}</a>
+          </div>
+          <b>Author(s): </b><label id="authors">{authors}</label><br>
+          <b>Categories: </b><label id="categories">{categories}</label><br>
+          <b>Technical information</b><br>
+          <div class="cbc_quote">
+            Language: <label id="language">{language}</label><br>
+            Source: <a id="source" href="{sourceUrl}">{source}</a><br>
+            Framework: <label id="framework">{framework}</label><br>
+            Systems: <label id="systems">{systems}</label>
+          </div>
+          <b>Compatible clients: </b><label id="clients">{clients}</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
